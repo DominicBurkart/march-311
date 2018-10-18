@@ -14,6 +14,8 @@ within_month = [] # number of 311 calls on the building targeted by each raid in
 within_month_valid = []
 within_year = [] # number of 311 calls on the building targeted by each raid in the preceding 365 days.
 within_year_valid = []
+preceding = []
+preceding_valid = []
 preceding_set = []
 
 MONTH = datetime.timedelta(days = 30)
@@ -98,30 +100,64 @@ for index, raid in march_with_lat.iterrows():
                             (binned311['Borough'] == raid.borough_name.upper())]
     number_calls.append(linked_311s.shape[0])
     try:
-        linked_311s['preceding_month'] = linked_311s['Created Date'].map(
-            lambda created: True if parser.parse(created) < raid_time and raid_time - parser.parse(created) < MONTH else False
+        preceding_311s = linked_311s[linked_311s['Created Date'].map(
+            lambda created: True if parser.parse(created) < raid_time else False
+        )]
+        preceding_311s['relevant_infraction'] = preceding_311s[preceding_311s['Complaint Type'].isin(INFRACTIONS)]
+        preceding_311s['preceding_month'] = preceding_311s['Created Date'].map(
+            lambda created: True if raid_time - parser.parse(created) < MONTH else False
         )
-        linked_311s['preceding_year'] = linked_311s['Created Date'].map(
-            lambda created: True if parser.parse(created) < raid_time and raid_time - parser.parse(created) < YEAR else False
+        preceding_311s['preceding_year'] = linked_311s['Created Date'].map(
+            lambda created: True if  raid_time - parser.parse(created) < YEAR else False
         )
-        preceding_month = linked_311s[linked_311s["preceding_month"] == True]
-        preceding_month_valid = preceding_month[preceding_month['Complaint Type'].isin(INFRACTIONS)]
-        preceding_year = linked_311s[linked_311s["preceding_year"] == True]
-        preceding_year_valid = preceding_year[preceding_year['Complaint Type'].isin(INFRACTIONS)]
+        preceding.append(preceding_311s.shape[0])
+        preceding_valid.append(preceding_311s[preceding_311s.relevant_infraction].shape[0])
+        preceding_month = preceding_311s[preceding_311s["preceding_month"] == True]
+        preceding_month_valid = preceding_month[preceding_month.relevant_infraction]
+        preceding_year = preceding_311s[preceding_311s["preceding_year"] == True]
+        preceding_year_valid = preceding_year[preceding_year.relevant_infraction]
         within_month.append(preceding_month.shape[0])
+        within_month_valid.append(preceding_month_valid.shape[0])
         within_year.append(preceding_year.shape[0])
+        within_year_valid.append(preceding_year_valid.shape[0])
         preceding_set.extend(preceding_year['Complaint Type'].values)
     except AttributeError: # query returned a series
         created = parser.parse(linked_311s['Created Date'])
-        if created < raid_time and raid_time - created < MONTH:
-            within_month.append(1)
-            if INFRACTIONS.contains(linked_311s['Complaint Type']):
-                within_month_valid.append(1)
-        if created < raid_time and raid_time - created < YEAR:
-            within_year.append(1)
-            if INFRACTIONS.contains(linked_311s['Complaint Type']):
-                within_year_valid.append(1)
-            preceding_set.append(linked_311s['Complaint Type'])
+        if created < raid_time:
+            preceding.append(1)
+            is_inf = linked_311s['Complaint Type'] in INFRACTIONS
+            if is_inf:
+                preceding_valid.append(1)
+            else:
+                preceding_valid.append(0)
+            if raid_time - created < YEAR:
+                preceding_set.append(linked_311s['Complaint Type'])
+                within_year.append(1)
+                if is_inf:
+                    within_year_valid.append(1)
+                else:
+                    within_year_valid.append(0)
+                if raid_time - created < MONTH:
+                    within_month.append(1)
+                    if is_inf:
+                        within_month_valid.append(1)
+                    else:
+                        within_month_valid.append(0)
+        else:
+            preceding.append(0)
+            preceding_valid.append(0)
+            within_month_valid.append(0)
+            within_month.append(0)
+            within_year.append(0)
+            within_year_valid(0)
+    except KeyError: # no preceding
+        print("passing on "+str(i))
+        preceding.append(0)
+        preceding_valid.append(0)
+        within_month_valid.append(0)
+        within_month.append(0)
+        within_year.append(0)
+        within_year_valid(0)
     i += 1
 
 
@@ -129,6 +165,7 @@ march_with_lat['number_calls'] = number_calls
 march_with_lat['preceding_month'] = within_month
 march_with_lat.to_csv("march_with_raid_links.csv",index=False)
 print("proportion ever 311'd: ", str(float(len([v for v in number_calls if v > 0])) / march_with_lat.shape[0]))
+print("proportion preceded by 311 (since 2010): "+str(float(len([v for v in preceding if v > 0])) / march_with_lat.shape[0]))
 print("proportion preceded by 311 (30 days): "+str(float(len([v for v in within_month if v > 0])) / march_with_lat.shape[0]))
 print("proportion preceded by 311 (365 days): "+str(float(len([v for v in within_year if v > 0])) / march_with_lat.shape[0]))
 print("valid proportion preceded by 311 (30 days): "+str(float(len([v for v in within_month_valid if v > 0])) / march_with_lat.shape[0]))
