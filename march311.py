@@ -111,7 +111,6 @@ for index, raid in march_with_lat.iterrows():
             lambda created: True if parser.parse(created) < raid_time else False
         )]
         preceding_311s['relevant_infraction'] = preceding_311s['Complaint Type'].isin(INFRACTIONS)
-        preceding_311s['preceding_year'] = linked_311s['Created Date'].map(
         preceding_311s['preceding_year'] = preceding_311s['Created Date'].map(
             lambda created: True if raid_time - parser.parse(created) < YEAR else False
         )
