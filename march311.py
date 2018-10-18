@@ -9,18 +9,8 @@ march_with_lat = pd.read_csv("march_raids_with_lat.csv")
 march_with_lat['fl_bin'] = march_with_lat.bin_number.astype("float")
 binned311 = pd.read_csv("311_Service_Requests_from_2010_to_Present.csv")
 
-number_calls = [] # number of 311 calls on the building targeted by each raid.
-within_month = [] # number of 311 calls on the building targeted by each raid in the preceding 30 days.
-within_month_valid = []
-within_year = [] # number of 311 calls on the building targeted by each raid in the preceding 365 days.
-within_year_valid = []
-preceding = []
-preceding_valid = []
-preceding_set = []
-
 MONTH = datetime.timedelta(days = 30)
 YEAR = datetime.timedelta(days = 365)
-
 INFRACTIONS = set([
     "Noise - Commercial",
     "Noise - Residential",
@@ -83,6 +73,15 @@ INFRACTIONS = set([
     "PLUMBING",
     "HEAT/HOT WATER"]
 )
+
+number_calls = [] # number of 311 calls on the building targeted by each raid.
+within_month = [] # number of 311 calls on the building targeted by each raid in the preceding 30 days.
+within_month_valid = []
+within_year = [] # number of 311 calls on the building targeted by each raid in the preceding 365 days.
+within_year_valid = []
+preceding = []
+preceding_valid = []
+preceding_set = []
 
 i = 0
 old = None
