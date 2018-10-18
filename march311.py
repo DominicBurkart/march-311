@@ -103,7 +103,7 @@ for index, raid in march_with_lat.iterrows():
         preceding_311s = linked_311s[linked_311s['Created Date'].map(
             lambda created: True if parser.parse(created) < raid_time else False
         )]
-        preceding_311s['relevant_infraction'] = preceding_311s[preceding_311s['Complaint Type'].isin(INFRACTIONS)]
+        preceding_311s['relevant_infraction'] = preceding_311s['Complaint Type'].isin(INFRACTIONS)
         preceding_311s['preceding_month'] = preceding_311s['Created Date'].map(
             lambda created: True if raid_time - parser.parse(created) < MONTH else False
         )
@@ -149,7 +149,7 @@ for index, raid in march_with_lat.iterrows():
             within_month_valid.append(0)
             within_month.append(0)
             within_year.append(0)
-            within_year_valid(0)
+            within_year_valid.append(0)
     except KeyError: # no preceding
         print("passing on "+str(i))
         preceding.append(0)
@@ -157,7 +157,7 @@ for index, raid in march_with_lat.iterrows():
         within_month_valid.append(0)
         within_month.append(0)
         within_year.append(0)
-        within_year_valid(0)
+        within_year_valid.append(0)
     i += 1
 
 
