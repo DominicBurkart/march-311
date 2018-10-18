@@ -19,7 +19,7 @@ preceding_set = []
 MONTH = datetime.timedelta(days = 30)
 YEAR = datetime.timedelta(days = 365)
 
-INFRACTIONS = set(
+INFRACTIONS = set([
     "Noise - Commercial",
     "Noise - Residential",
     "Noise - Street/Sidewalk",
@@ -74,7 +74,12 @@ INFRACTIONS = set(
     "Beach/Pool/Sauna Complaint",
     "Drug Activity",
     "Indoor Sewage",
-    "Cranes and Derricks"
+    "Cranes and Derricks",
+    "Water System",
+    "General Construction/Plumbing",
+    "HEATING",
+    "PLUMBING",
+    "HEAT/HOT WATER"]
 )
 
 i = 0
