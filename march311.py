@@ -83,6 +83,14 @@ preceding = []
 preceding_valid = []
 preceding_set = []
 
+def zeros():
+    preceding.append(0)
+    preceding_valid.append(0)
+    within_month_valid.append(0)
+    within_month.append(0)
+    within_year.append(0)
+    within_year_valid.append(0)
+
 i = 0
 old = None
 
@@ -103,23 +111,26 @@ for index, raid in march_with_lat.iterrows():
             lambda created: True if parser.parse(created) < raid_time else False
         )]
         preceding_311s['relevant_infraction'] = preceding_311s['Complaint Type'].isin(INFRACTIONS)
-        preceding_311s['preceding_month'] = preceding_311s['Created Date'].map(
-            lambda created: True if raid_time - parser.parse(created) < MONTH else False
-        )
         preceding_311s['preceding_year'] = linked_311s['Created Date'].map(
-            lambda created: True if  raid_time - parser.parse(created) < YEAR else False
+            lambda created: True if (raid_time - parser.parse(created)) < YEAR else False
+        )
+        preceding_311s['preceding_month'] = preceding_311s['Created Date'].map(
+            lambda created: True if (raid_time - parser.parse(created)) < MONTH else False
         )
         preceding.append(preceding_311s.shape[0])
-        preceding_valid.append(preceding_311s[preceding_311s.relevant_infraction].shape[0])
-        preceding_month = preceding_311s[preceding_311s["preceding_month"] == True]
-        preceding_month_valid = preceding_month[preceding_month.relevant_infraction]
-        preceding_year = preceding_311s[preceding_311s["preceding_year"] == True]
-        preceding_year_valid = preceding_year[preceding_year.relevant_infraction]
-        within_month.append(preceding_month.shape[0])
-        within_month_valid.append(preceding_month_valid.shape[0])
-        within_year.append(preceding_year.shape[0])
-        within_year_valid.append(preceding_year_valid.shape[0])
-        preceding_set.extend(preceding_year['Complaint Type'].values)
+        if preceding_311s.shape[0] > 0:
+            preceding_valid.append(preceding_311s[(preceding_311s.relevant_infraction.notnull()) & (preceding_311s.relevant_infraction)].shape[0])
+            preceding_month = preceding_311s[preceding_311s["preceding_month"]]
+            preceding_month_valid = preceding_month[(preceding_month.relevant_infraction.notnull()) & (preceding_month.relevant_infraction)]
+            preceding_year = preceding_311s[preceding_311s["preceding_year"]]
+            preceding_year_valid = preceding_year[(preceding_year.relevant_infraction.notnull()) & (preceding_year.relevant_infraction)]
+            within_month.append(preceding_month.shape[0])
+            within_month_valid.append(preceding_month_valid.shape[0])
+            within_year.append(preceding_year.shape[0])
+            within_year_valid.append(preceding_year_valid.shape[0])
+            preceding_set.extend(preceding_year['Complaint Type'].values)
+        else:
+            zeros()
     except AttributeError: # query returned a series
         created = parser.parse(linked_311s['Created Date'])
         if created < raid_time:
@@ -129,34 +140,24 @@ for index, raid in march_with_lat.iterrows():
                 preceding_valid.append(1)
             else:
                 preceding_valid.append(0)
-            if raid_time - created < YEAR:
+            if (raid_time - created) < YEAR:
                 preceding_set.append(linked_311s['Complaint Type'])
                 within_year.append(1)
                 if is_inf:
                     within_year_valid.append(1)
                 else:
                     within_year_valid.append(0)
-                if raid_time - created < MONTH:
+                if (raid_time - created) < MONTH:
                     within_month.append(1)
                     if is_inf:
                         within_month_valid.append(1)
                     else:
                         within_month_valid.append(0)
         else:
-            preceding.append(0)
-            preceding_valid.append(0)
-            within_month_valid.append(0)
-            within_month.append(0)
-            within_year.append(0)
-            within_year_valid.append(0)
+            zeros()
     except KeyError: # no preceding
         print("passing on "+str(i))
-        preceding.append(0)
-        preceding_valid.append(0)
-        within_month_valid.append(0)
-        within_month.append(0)
-        within_year.append(0)
-        within_year_valid.append(0)
+        zeros()
     i += 1
 
 
