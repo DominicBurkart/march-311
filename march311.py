@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import datetime
 from dateutil import parser
@@ -9,6 +10,7 @@ march_with_lat = pd.read_csv("march_raids_with_lat.csv")
 march_with_lat['fl_bin'] = march_with_lat.bin_number.astype("float")
 binned311 = pd.read_csv("311_Service_Requests_from_2010_to_Present.csv")
 
+SPECIFIC_CASE_FOLDER = "cases"
 MONTH = datetime.timedelta(days = 30)
 YEAR = datetime.timedelta(days = 365)
 INFRACTIONS = set([
@@ -82,6 +84,8 @@ within_year_valid = []
 preceding = []
 preceding_valid = []
 preceding_set = []
+resolved = []
+specific_paths = []
 
 def zeros():
     preceding.append(0)
@@ -90,18 +94,23 @@ def zeros():
     within_month.append(0)
     within_year.append(0)
     within_year_valid.append(0)
+    resolved.append(0)
+    specific_paths.append(None)
+
+def mkpath(first_row, time):
+    return os.path.join(SPECIFIC_CASE_FOLDER, first_row['Incident Address'] + "_" + first_row["Borough"] + "_" + time.isoformat() + ".csv")
 
 i = 0
 old = None
 
 for index, raid in march_with_lat.iterrows():
-    if i % 1000 == 0:
-        print("Current index: "+str(i))
-        print("number_calls (setted): "+str(set(number_calls)))
-        print("number_calls (list): "+str(number_calls))
-        print("within_month (setted): "+str(set(within_month)))
-        print("within_year (setted): " + str(set(within_year)))
-        print("preceding_set (setted): "+str(set(preceding_set)))
+    # if i % 1000 == 0:
+    #     print("Current index: "+str(i))
+    #     print("number_calls (setted): "+str(set(number_calls)))
+    #     print("number_calls (list): "+str(number_calls))
+    #     print("within_month (setted): "+str(set(within_month)))
+    #     print("within_year (setted): " + str(set(within_year)))
+    #     print("preceding_set (setted): "+str(set(preceding_set)))
     raid_time = parser.parse(raid.inspection_date)
     linked_311s = binned311[(binned311['Incident Address'] == raid.address) &
                             (binned311['Borough'] == raid.borough_name.upper())]
@@ -127,6 +136,10 @@ for index, raid in march_with_lat.iterrows():
             within_month.append(preceding_month.shape[0])
             within_month_valid.append(preceding_month_valid.shape[0])
             within_year.append(preceding_year.shape[0])
+            resolved.append(preceding_year[preceding_year["Status"] == "Assigned"].shape[0])
+            specific_path = mkpath(preceding_311s.iloc[0], raid_time)
+            preceding_311s.to_csv(specific_path, index=False)
+            specific_paths.append(specific_path)
             within_year_valid.append(preceding_year_valid.shape[0])
             preceding_set.extend(preceding_year['Complaint Type'].values)
         else:
@@ -136,6 +149,14 @@ for index, raid in march_with_lat.iterrows():
         if created < raid_time:
             preceding.append(1)
             is_inf = linked_311s['Complaint Type'] in INFRACTIONS
+            r = 0 if linked_311s["Status"] != "Assigned" else 1
+            resolved.append(r)
+            if r == 1:
+                specific_path = mkpath(preceding_311s.iloc[0], raid_time)
+                preceding_311s.to_csv(specific_path)
+                specific_paths.append(specific_path)
+            else:
+                specific_paths.append(None)
             if is_inf:
                 preceding_valid.append(1)
             else:
@@ -162,7 +183,12 @@ for index, raid in march_with_lat.iterrows():
 
 
 march_with_lat['number_calls'] = number_calls
+march_with_lat['since_2010'] = preceding
 march_with_lat['preceding_month'] = within_month
+march_with_lat['preceding_year'] = within_year
+march_with_lat['proportion_last_year_resolved'] = resolved
+march_with_lat['specific_datafile'] = specific_paths
+
 march_with_lat.to_csv("march_with_raid_links.csv",index=False)
 print("proportion ever 311'd: ", str(float(len([v for v in number_calls if v > 0])) / march_with_lat.shape[0]))
 print("proportion preceded by 311 (since 2010): "+str(float(len([v for v in preceding if v > 0])) / march_with_lat.shape[0]))
