@@ -198,7 +198,7 @@ march_with_lat['specific_datafile'] = specific_paths
 
 ### Code for generating the address list
 
-march_with_lat["full_address"] = march_with_lat.address + march_with_lat.borough_name.upper()
+march_with_lat["full_address"] = march_with_lat.address + march_with_lat.borough_name
 bb = []
 for building_address in march_with_lat.full_address.unique():
     relevant = march_with_lat[march_with_lat.full_address == building_address]
@@ -208,6 +208,7 @@ for building_address in march_with_lat.full_address.unique():
         "number_of_raids": relevant.shape[0],
         "raid_dates_and_resolutions": list(zip(relevant.inspection_date, relevant.access_1))
     })
+
 by_building = pd.DataFrame.from_records(bb)
 by_building.to_csv("raids_by_building.csv", index=False)
 
