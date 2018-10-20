@@ -174,6 +174,14 @@ for index, raid in march_with_lat.iterrows():
                         within_month_valid.append(1)
                     else:
                         within_month_valid.append(0)
+                else:
+                    within_month.append(0)
+                    within_month_valid.append(0)
+            else:
+                within_year.append(0)
+                within_month.append(0)
+                within_month_valid.append(0)
+                within_year_valid.append(0)
         else:
             zeros()
     except KeyError: # no preceding
@@ -181,13 +189,29 @@ for index, raid in march_with_lat.iterrows():
         zeros()
     i += 1
 
-
 march_with_lat['number_calls'] = number_calls
 march_with_lat['since_2010'] = preceding
 march_with_lat['preceding_month'] = within_month
 march_with_lat['preceding_year'] = within_year
 march_with_lat['proportion_last_year_resolved'] = resolved
 march_with_lat['specific_datafile'] = specific_paths
+
+### Code for generating the address list
+
+march_with_lat["full_address"] = march_with_lat.address + march_with_lat.borough_name.upper()
+bb = []
+for building_address in march_with_lat.full_address.unique():
+    relevant = march_with_lat[march_with_lat.full_address == building_address]
+    bb.append({
+        "address": building_address,
+        "proportion_no_action": float(len([v for v in relevant.access_1.values if v == "MARCH: NO ENFORCEMENT ACTION TAKEN"])) / relevant.shape[0],
+        "number_of_raids": relevant.shape[0],
+        "raid_dates_and_resolutions": list(zip(relevant.inspection_date, relevant.access_1))
+    })
+by_building = pd.DataFrame.from_records(bb)
+by_building.to_csv("raids_by_building.csv", index=False)
+
+### end code for generating the address list
 
 march_with_lat.to_csv("march_with_raid_links.csv",index=False)
 print("proportion ever 311'd: ", str(float(len([v for v in number_calls if v > 0])) / march_with_lat.shape[0]))
