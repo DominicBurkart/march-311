@@ -13,7 +13,16 @@ binned311 = pd.read_csv("311_Service_Requests_from_2010_to_Present.csv")
 SPECIFIC_CASE_FOLDER = "cases"
 MONTH = datetime.timedelta(days = 30)
 YEAR = datetime.timedelta(days = 365)
-INFRACTIONS = set([
+NOISE_INFRACTIONS = {
+    "Noise - Commercial",
+    "Noise - Residential",
+    "Noise - Street/Sidewalk",
+    "Noise Survey",
+    "Noise",
+    "Noise - House of Worship",
+    "Noise - Park"
+}
+INFRACTIONS = {
     "Noise - Commercial",
     "Noise - Residential",
     "Noise - Street/Sidewalk",
@@ -73,14 +82,15 @@ INFRACTIONS = set([
     "General Construction/Plumbing",
     "HEATING",
     "PLUMBING",
-    "HEAT/HOT WATER"]
-)
+    "HEAT/HOT WATER"
+}
 
 number_calls = [] # number of 311 calls on the building targeted by each raid.
 within_month = [] # number of 311 calls on the building targeted by each raid in the preceding 30 days.
 within_month_valid = []
 within_year = [] # number of 311 calls on the building targeted by each raid in the preceding 365 days.
 within_year_valid = []
+discluding_noise = [] # number of 311 calls in the last year discluding noise complaints
 preceding = []
 preceding_valid = []
 preceding_set = []
@@ -94,6 +104,7 @@ def zeros():
     within_month.append(0)
     within_year.append(0)
     within_year_valid.append(0)
+    discluding_noise.append(0)
     resolved.append(0)
     specific_paths.append(None)
 
@@ -104,13 +115,6 @@ i = 0
 old = None
 
 for index, raid in march_with_lat.iterrows():
-    # if i % 1000 == 0:
-    #     print("Current index: "+str(i))
-    #     print("number_calls (setted): "+str(set(number_calls)))
-    #     print("number_calls (list): "+str(number_calls))
-    #     print("within_month (setted): "+str(set(within_month)))
-    #     print("within_year (setted): " + str(set(within_year)))
-    #     print("preceding_set (setted): "+str(set(preceding_set)))
     raid_time = parser.parse(raid.inspection_date)
     linked_311s = binned311[(binned311['Incident Address'] == raid.address) &
                             (binned311['Borough'] == raid.borough_name.upper())]
@@ -126,8 +130,8 @@ for index, raid in march_with_lat.iterrows():
         preceding_311s['preceding_month'] = preceding_311s['Created Date'].map(
             lambda created: True if raid_time - parser.parse(created) < MONTH else False
         )
-        preceding.append(preceding_311s.shape[0])
         if preceding_311s.shape[0] > 0:
+            preceding.append(preceding_311s.shape[0])
             preceding_valid.append(preceding_311s[(preceding_311s.relevant_infraction.notnull()) & (preceding_311s.relevant_infraction)].shape[0])
             preceding_month = preceding_311s[preceding_311s["preceding_month"]]
             preceding_month_valid = preceding_month[(preceding_month.relevant_infraction.notnull()) & (preceding_month.relevant_infraction)]
@@ -136,6 +140,7 @@ for index, raid in march_with_lat.iterrows():
             within_month.append(preceding_month.shape[0])
             within_month_valid.append(preceding_month_valid.shape[0])
             within_year.append(preceding_year.shape[0])
+            discluding_noise.append(preceding_year[~preceding_year['Complaint Type'].isin(NOISE_INFRACTIONS)].shape[0])
             resolved.append(preceding_year[preceding_year["Status"] == "Assigned"].shape[0])
             specific_path = mkpath(preceding_311s.iloc[0], raid_time)
             preceding_311s.to_csv(specific_path, index=False)
@@ -164,6 +169,10 @@ for index, raid in march_with_lat.iterrows():
             if (raid_time - created) < YEAR:
                 preceding_set.append(linked_311s['Complaint Type'])
                 within_year.append(1)
+                if linked_311s['Complaint Type'] in NOISE_INFRACTIONS:
+                    discluding_noise.append(1)
+                else:
+                    discluding_noise.append(0)
                 if is_inf:
                     within_year_valid.append(1)
                 else:
@@ -182,6 +191,7 @@ for index, raid in march_with_lat.iterrows():
                 within_month.append(0)
                 within_month_valid.append(0)
                 within_year_valid.append(0)
+                discluding_noise.append(0)
         else:
             zeros()
     except KeyError: # no preceding
@@ -195,6 +205,7 @@ march_with_lat['preceding_month'] = within_month
 march_with_lat['preceding_year'] = within_year
 march_with_lat['proportion_last_year_resolved'] = resolved
 march_with_lat['specific_datafile'] = specific_paths
+march_with_lat['preceding_year_discluding_noise'] = discluding_noise
 
 ### Code for generating the address list
 
@@ -206,7 +217,9 @@ for building_address in march_with_lat.full_address.unique():
         "address": building_address,
         "proportion_no_action": float(len([v for v in relevant.access_1.values if v == "MARCH: NO ENFORCEMENT ACTION TAKEN"])) / relevant.shape[0],
         "number_of_raids": relevant.shape[0],
-        "raid_dates_and_resolutions": list(zip(relevant.inspection_date, relevant.access_1))
+        "raid_dates_and_resolutions": list(zip(relevant.inspection_date, relevant.access_1)),
+        "longitude": relevant.longitude[0], # guaranteed to have at least one case.
+        "latitude": relevant.latitude[0],
     })
 
 by_building = pd.DataFrame.from_records(bb)
