@@ -209,7 +209,7 @@ march_with_lat['preceding_year_discluding_noise'] = discluding_noise
 
 ### Code for generating the address list
 
-march_with_lat["full_address"] = march_with_lat.address + march_with_lat.borough_name
+march_with_lat["full_address"] = march_with_lat.address + " " + march_with_lat.borough_name
 bb = []
 for building_address in march_with_lat.full_address.unique():
     relevant = march_with_lat[march_with_lat.full_address == building_address]
