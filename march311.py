@@ -218,8 +218,8 @@ for building_address in march_with_lat.full_address.unique():
         "proportion_no_action": float(len([v for v in relevant.access_1.values if v == "MARCH: NO ENFORCEMENT ACTION TAKEN"])) / relevant.shape[0],
         "number_of_raids": relevant.shape[0],
         "raid_dates_and_resolutions": list(zip(relevant.inspection_date, relevant.access_1)),
-        "longitude": relevant.longitude[0], # guaranteed to have at least one case.
-        "latitude": relevant.latitude[0],
+        "longitude": relevant.longitude.iloc[0], # guaranteed to have at least one case.
+        "latitude": relevant.latitude.iloc[0],
     })
 
 by_building = pd.DataFrame.from_records(bb)
@@ -234,7 +234,7 @@ print("proportion preceded by 311 (30 days): "+str(float(len([v for v in within_
 print("proportion preceded by 311 (365 days): "+str(float(len([v for v in within_year if v > 0])) / march_with_lat.shape[0]))
 print("valid proportion preceded by 311 (30 days): "+str(float(len([v for v in within_month_valid if v > 0])) / march_with_lat.shape[0]))
 print("valid proportion preceded by 311 (365 days): "+str(float(len([v for v in within_year_valid if v > 0])) / march_with_lat.shape[0]))
-
+print("proportion preced by 311 (365 days, not including noise complaints): "+str(float(len([v for v in discluding_noise if v > 0])) / march_with_lat.shape[0]))
 
 preceding_set = Counter(preceding_set)
 print(preceding_set)
